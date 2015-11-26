@@ -5,6 +5,7 @@ import "os"
 import "github.com/larspensjo/config"
 import "flag"
 import "strconv"
+import "time"
 
 var confile string
 
@@ -22,11 +23,13 @@ var keepalived int = 1
 var currentnums int = 1
 var logfile string
 var sqlstr string
+var presstime int64 = 300
 
 const (
 	CURRENTNUMS = 8
 	KEEPALIVED  = 1
 	LOGFILE     = "/tmp/dbpress.log"
+	PRESSTIME   = 300
 )
 
 func init() {
@@ -40,7 +43,26 @@ func init() {
 func main() {
 	fmt.Println("## main ")
 	fmt.Println(dsn)
-	fmt.Println(sqlstr)
+	if keepalived == 1 {
+		LongconnPress()
+	} else if keepalived == 0 {
+		ShortconnPress()
+	}
+}
+
+func LongconnPress() {
+	fmt.Println("long connect")
+	j := time.Now().Unix() + presstime
+	fmt.Println(j)
+	for {
+		if j < time.Now().Unix() {
+			break
+		}
+	}
+}
+
+func ShortconnPress() {
+	fmt.Println("short connect")
 }
 
 func ParseConfile(key string) {
@@ -104,6 +126,11 @@ func ParseConfile(key string) {
 			logfile = v
 		} else {
 			logfile = LOGFILE
+		}
+		if v, ok := conf["presstime"]; ok {
+			presstime, _ = strconv.ParseInt(v, 10, 64)
+		} else {
+			presstime = PRESSTIME
 		}
 		if v, ok := conf["sqljson"]; ok {
 			sqlstr = v
