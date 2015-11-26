@@ -99,6 +99,7 @@ func ShortconnPress() {
                 }
 		db.Close()
 	}
+	c <- 1
 }
 
 func ParseConfile(key string) {
