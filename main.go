@@ -6,6 +6,8 @@ import "github.com/larspensjo/config"
 import "flag"
 import "strconv"
 import "time"
+import "database/sql"
+import _ "github.com/go-sql-driver/mysql"
 
 var confile string
 
@@ -24,6 +26,7 @@ var currentnums int = 1
 var logfile string
 var sqlstr string
 var presstime int64 = 300
+var c chan int
 
 const (
 	CURRENTNUMS = 8
@@ -42,27 +45,60 @@ func init() {
 
 func main() {
 	fmt.Println("## main ")
-	fmt.Println(dsn)
-	if keepalived == 1 {
-		LongconnPress()
-	} else if keepalived == 0 {
-		ShortconnPress()
+
+	c = make(chan int)
+	i := 0
+	for i<currentnums{
+		if keepalived == 1 {
+			go LongconnPress()
+			i++
+		} else if keepalived == 0 {
+			go ShortconnPress()
+			i++
+		}
+	}
+	j := 0
+	for j<currentnums{
+		<-c	
+		j++
 	}
 }
 
 func LongconnPress() {
-	fmt.Println("long connect")
 	j := time.Now().Unix() + presstime
-	fmt.Println(j)
+	db, _ := sql.Open("mysql", "yxb:yxb@tcp(127.0.0.1:3306)/test?timeout=4s&charset=utf8")	
 	for {
 		if j < time.Now().Unix() {
 			break
 		}
+		sql := "SELECT 1 AS id"
+		rows := db.QueryRow(sql)
+                var id int
+                err := rows.Scan(&id)
+                if err != nil {
+                        fmt.Println(err)
+                }
 	}
+	db.Close()
+	c <- 1
 }
 
 func ShortconnPress() {
-	fmt.Println("short connect")
+	j := time.Now().Unix() + presstime
+	for {
+		if j < time.Now().Unix() {
+			break
+		}
+		db, _ := sql.Open("mysql", "yxb:yxb@tcp(127.0.0.1:3306)/test?timeout=4s&charset=utf8")	
+		sql := "SELECT 1 AS id"
+		rows := db.QueryRow(sql)
+                var id int
+                err := rows.Scan(&id)
+                if err != nil {
+                        fmt.Println(err)
+                }
+		db.Close()
+	}
 }
 
 func ParseConfile(key string) {
