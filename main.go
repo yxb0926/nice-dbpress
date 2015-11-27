@@ -9,6 +9,12 @@ import "time"
 import "database/sql"
 import _ "github.com/go-sql-driver/mysql"
 import "runtime"
+import "io/ioutil"
+import "math/rand"
+
+//import "reflect"
+//import "encoding/json"
+import "github.com/bitly/go-simplejson"
 
 var confile string
 
@@ -21,11 +27,18 @@ type dsninfo struct {
 	charset  string
 }
 
+type sqlstruct struct {
+	Tbnamepre string
+	Tbrange   string
+	Sql       string
+	Weight    int
+}
+
 var dsn dsninfo
 var keepalived int = 1
 var currentnums int = 1
 var logfile string
-var sqlstr string
+var sqlfile string
 var presstime int64 = 300
 var c chan int
 var dbtype string = "mysql"
@@ -45,11 +58,24 @@ func init() {
 	ParseConfile("dbpress")
 
 	setConnstr()
+	parseSqlfile(sqlfile)
 }
 
 func main() {
 	fmt.Println("## main ")
 	runtime.GOMAXPROCS(32)
+
+	var a, b, cc int = 10, 20, 70
+	for i := 0; i < 10000; i++ {
+		j := rand.Intn(100)
+		if j <= 10 {
+			fmt.Println("a")
+		} else if j > 10 && j <= a+b {
+			fmt.Println("b")
+		} else if j > a+b && j <= a+b+cc {
+			fmt.Println("c")
+		}
+	}
 
 	c = make(chan int)
 	i := 0
@@ -73,18 +99,16 @@ func main() {
 func LongconnPress() {
 	j := time.Now().Unix() + presstime
 	db, _ := sql.Open(dbtype, connstr)
+	var args []interface{}
+	args = append(args, 12)
 	for {
 		runtime.Gosched()
 		if j < time.Now().Unix() {
 			break
 		}
-		sql := "SELECT 1 AS id"
-		rows := db.QueryRow(sql)
-		var id int
-		err := rows.Scan(&id)
-		if err != nil {
-			fmt.Println(err)
-		}
+		sql := "SELECT *  FROM config_center.config_info WHERE id=?"
+
+		db.Exec(sql, args...)
 	}
 	db.Close()
 	c <- 1
@@ -111,6 +135,27 @@ func ShortconnPress() {
 	c <- 1
 }
 
+func parseSqlfile(filename string) {
+	body, err := ioutil.ReadFile(filename)
+	if err != nil {
+		fmt.Errorf("Read the sql.json failed")
+	}
+
+	js, err := simplejson.NewJson(body)
+	if err != nil {
+		fmt.Errorf(err.Error())
+	}
+	mapx, _ := js.Map()
+	for _, v := range mapx {
+		if rec, ok := v.(map[string]interface{}); ok {
+			for key, val := range rec {
+				fmt.Println(key, val)
+			}
+		}
+	}
+}
+
+// 解析配置文件
 func ParseConfile(key string) {
 	conf := make(map[string]string)
 	cfg, err := config.ReadDefault(confile)
@@ -179,7 +224,7 @@ func ParseConfile(key string) {
 			presstime = PRESSTIME
 		}
 		if v, ok := conf["sqljson"]; ok {
-			sqlstr = v
+			sqlfile = v
 		} else {
 			fmt.Errorf("Key:sqljson Not Found In The Config file.")
 		}

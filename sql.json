@@ -1,0 +1,14 @@
+{
+    "sql1": {
+        "tbnamepre": "test.sbtest",
+        "tbrange": "[0-10]",
+        "sql": "select * from TABLENAME where id=#RandInt(1,20000)#",
+        "weight": "10"
+    },
+    "sql2": {
+        "tbnamepre": "test.sbtest",
+        "tbrange": "[0-10]",
+        "sql": "select * from TABLENAME where id=#RandInt(1,20000)# AND k=#RandInt(10000,20000)#",
+        "weight": "90"
+    }
+}
