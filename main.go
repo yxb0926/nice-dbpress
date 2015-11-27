@@ -8,6 +8,7 @@ import "strconv"
 import "time"
 import "database/sql"
 import _ "github.com/go-sql-driver/mysql"
+import "runtime"
 
 var confile string
 
@@ -27,6 +28,8 @@ var logfile string
 var sqlstr string
 var presstime int64 = 300
 var c chan int
+var dbtype string = "mysql"
+var connstr string = ""
 
 const (
 	CURRENTNUMS = 8
@@ -41,6 +44,7 @@ func init() {
 	// Parse the conf file
 	ParseConfile("dbpress")
 
+	setConnstr()
 }
 
 func main() {
@@ -65,9 +69,10 @@ func main() {
 	}
 }
 
+// 和mysqld 保持长连接
 func LongconnPress() {
 	j := time.Now().Unix() + presstime
-	db, _ := sql.Open("mysql", "yxb:yxb@tcp(127.0.0.1:3306)/test?timeout=4s&charset=utf8")
+	db, _ := sql.Open(dbtype, connstr)
 	for {
 		runtime.Gosched()
 		if j < time.Now().Unix() {
@@ -85,6 +90,7 @@ func LongconnPress() {
 	c <- 1
 }
 
+// 和mysqld 保持短连接
 func ShortconnPress() {
 	j := time.Now().Unix() + presstime
 	for {
@@ -92,7 +98,7 @@ func ShortconnPress() {
 		if j < time.Now().Unix() {
 			break
 		}
-		db, _ := sql.Open("mysql", "yxb:yxb@tcp(127.0.0.1:3306)/test?timeout=4s&charset=utf8")
+		db, _ := sql.Open(dbtype, connstr)
 		sql := "SELECT 1 AS id"
 		rows := db.QueryRow(sql)
 		var id int
@@ -199,6 +205,20 @@ func GetIniFile() string {
 	}
 
 	return confile
+}
+
+func setConnstr() {
+	connstr += dsn.username
+	connstr += ":"
+	connstr += dsn.password
+	connstr += "@tcp("
+	connstr += dsn.hostname
+	connstr += ":"
+	connstr += dsn.port
+	connstr += ")/?timeout="
+	connstr += dsn.timeout
+	connstr += "&charset="
+	connstr += dsn.charset
 }
 
 func help() {
