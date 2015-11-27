@@ -45,10 +45,11 @@ func init() {
 
 func main() {
 	fmt.Println("## main ")
+	runtime.GOMAXPROCS(32)
 
 	c = make(chan int)
 	i := 0
-	for i<currentnums{
+	for i < currentnums {
 		if keepalived == 1 {
 			go LongconnPress()
 			i++
@@ -58,26 +59,27 @@ func main() {
 		}
 	}
 	j := 0
-	for j<currentnums{
-		<-c	
+	for j < currentnums {
+		<-c
 		j++
 	}
 }
 
 func LongconnPress() {
 	j := time.Now().Unix() + presstime
-	db, _ := sql.Open("mysql", "yxb:yxb@tcp(127.0.0.1:3306)/test?timeout=4s&charset=utf8")	
+	db, _ := sql.Open("mysql", "yxb:yxb@tcp(127.0.0.1:3306)/test?timeout=4s&charset=utf8")
 	for {
+		runtime.Gosched()
 		if j < time.Now().Unix() {
 			break
 		}
 		sql := "SELECT 1 AS id"
 		rows := db.QueryRow(sql)
-                var id int
-                err := rows.Scan(&id)
-                if err != nil {
-                        fmt.Println(err)
-                }
+		var id int
+		err := rows.Scan(&id)
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
 	db.Close()
 	c <- 1
@@ -86,17 +88,18 @@ func LongconnPress() {
 func ShortconnPress() {
 	j := time.Now().Unix() + presstime
 	for {
+		runtime.Gosched()
 		if j < time.Now().Unix() {
 			break
 		}
-		db, _ := sql.Open("mysql", "yxb:yxb@tcp(127.0.0.1:3306)/test?timeout=4s&charset=utf8")	
+		db, _ := sql.Open("mysql", "yxb:yxb@tcp(127.0.0.1:3306)/test?timeout=4s&charset=utf8")
 		sql := "SELECT 1 AS id"
 		rows := db.QueryRow(sql)
-                var id int
-                err := rows.Scan(&id)
-                if err != nil {
-                        fmt.Println(err)
-                }
+		var id int
+		err := rows.Scan(&id)
+		if err != nil {
+			fmt.Println(err)
+		}
 		db.Close()
 	}
 	c <- 1
